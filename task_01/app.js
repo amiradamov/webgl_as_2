@@ -31,7 +31,8 @@ window.onkeydown = function(event) {
 function rotateCamera(direction) {
   let theta = 5 * direction; // Rotation angle in degrees
   let rotationMatrix = rotate(theta, up);
-  eye = multVec(rotationMatrix, eye);
+  let rotatedEye = mult(rotationMatrix, vec4(eye[0], eye[1], eye[2], 1.0));
+  eye = vec3(rotatedEye[0], rotatedEye[1], rotatedEye[2]);
 }
 
 onload = () => {
