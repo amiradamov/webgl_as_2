@@ -1,29 +1,26 @@
 // app.js
+
 let gl, program;
 let vertexCount = 36;
 let modelViewMatrix;
+let isOrthographic = false; // Flag to track the projection mode
 
-let eye = [0, 0, 0.1];
+let eye = [0, 0, 2];
 let at = [0, 0, 0];
 let up = [0, 1, 0];
 
+// Function to handle keyboard events
 window.onkeydown = function(event) {
   switch(event.key) {
+    // ...
+    case 'O':
+      isOrthographic = true; // Switch to orthographic view
+      break;
     case 'P':
-      eye = [0, 0, 2]; // Perspective view
+      isOrthographic = false; // Switch to perspective view
       break;
   }
 };
-
-  function zoomIn() {
-    let zoomFactor = 0.1;
-    eye[2] -= zoomFactor; // Decrease the z-coordinate of eye for zooming in
-  }
-  
-  function zoomOut() {
-    let zoomFactor = 0.1;
-    eye[2] += zoomFactor; // Increase the z-coordinate of eye for zooming out
-  }
 
 onload = () => {
   let canvas = document.getElementById("webgl-canvas");
@@ -52,6 +49,17 @@ onload = () => {
     -1, 1, -1,
     1, 1, -1,
     1, -1, -1,
+  ];
+
+  let vertices2 = [
+    3, -1, -1,
+    3, 1, -1,
+    5, 1, -1,
+    5, -1, -1,
+    3, -1, -3,
+    3, 1, -3,
+    5, 1, -3,
+    5, -1, -3,
   ];
 
   let indices = [
@@ -85,7 +93,7 @@ onload = () => {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
   let vPosition = gl.getAttribLocation(program, 'vPosition');
-  gl.vertexAttribPointer(vPosition,3,gl.FLOAT,false,0,0);
+  gl.vertexAttribPointer(vPosition, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vPosition);
 
   let iBuffer = gl.createBuffer();
@@ -97,30 +105,44 @@ onload = () => {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
 
   let vColor = gl.getAttribLocation(program, 'vColor');
-  gl.vertexAttribPointer(vColor,3,gl.FLOAT,false,0,0);
+  gl.vertexAttribPointer(vColor, 3, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(vColor);
 
   modelViewMatrix = gl.getUniformLocation(program, 'modelViewMatrix');
 
-  render();
+  render(vertices, vertices2);
 };
 
-function render() { 
+function render(vertices, vertices2) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-  let fovy = 60; // Field of view in y-direction
+  let fovy = 60;
   let aspect = gl.canvas.width / gl.canvas.height;
   let near = 0.1;
   let far = 10;
 
-  let projectionMatrix = perspective(fovy, aspect, near, far);
+  let projectionMatrix;
+  if (isOrthographic) {
+    let left = -2;
+    let right = 2;
+    let bottom = -2;
+    let ytop = 2;
+    projectionMatrix = ortho(left, right, bottom, ytop, near, far);
+  } else {
+    projectionMatrix = perspective(fovy, aspect, near, far);
+  }
 
-  let mvm = lookAt(eye, at, up);
-  let mvp = mult(projectionMatrix, mvm);
+  let mvm1 = lookAt(eye, at, up);
+  let mvp1 = mult(projectionMatrix, mvm1);
 
-  gl.uniformMatrix4fv(modelViewMatrix, false, flatten(mvp));
-
+  gl.uniformMatrix4fv(modelViewMatrix, false, flatten(mvp1));
   gl.drawElements(gl.TRIANGLES, vertexCount, gl.UNSIGNED_BYTE, 0);
 
-  requestAnimationFrame(render);
+  let mvm2 = mult(translate(2, 0, 0), mvm1); // Translate the second cube
+  let mvp2 = mult(projectionMatrix, mvm2);
+
+  gl.uniformMatrix4fv(modelViewMatrix, false, flatten(mvp2));
+  gl.drawElements(gl.TRIANGLES, vertexCount, gl.UNSIGNED_BYTE, 0);
+
+  requestAnimationFrame(() => render(vertices, vertices2));
 }
